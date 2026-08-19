@@ -18,6 +18,36 @@ RiiSync is designed for Wii modders who use **Riivolution and Dolphin on Android
 
 ---
 
+## How It Works?
+
+### 🛠️ GitHub
+
+   * Use RiiSync to search for public repositories, browse users, or connect your own GitHub account using a Personal Access Token.
+
+   * If you have a Wii mod repository, you can manage it directly from RiiSync with familiar Git operations such as `pull`, `push`, and branch switching.
+
+### 🎮 Modding
+
+   * You don't need a GitHub repository to use the Modding section.
+
+   * Simply select a mod folder stored locally on your device and connect it to Dolphin with a single click.
+
+   * RiiSync creates the required link and continuously watches the folder for changes.
+
+### 🔃 Git + Modding
+
+   * For an even more powerful workflow, keep your mod inside your own GitHub repository.
+
+   * After pulling new changes from GitHub, RiiSync's live file watcher detects the updated files and automatically synchronizes them with Dolphin. This means your workflow can be as simple as:
+
+**GitHub → Pull → RiiSync detects changes → Dolphin is updated → Play.**
+
+### 📱 Riivolution
+
+   * When needed, you can open the Riivolution patch directly from the Modding section and modify it without leaving RiiSync.
+
+---
+
 ## Key Features
 
 ### GitHub Integration
@@ -68,38 +98,6 @@ RiiSync includes a dedicated artwork database for your Wii games and mods.
    * Connection Intelligence: Detects network changes and prevents actions that require an active connection.
    * Onboarding Experience: An interactive setup process helps configure permissions and verify that everything is ready.
    * Material 3 Design: Modern adaptive interface with full Light and Dark mode support.
-
----
-
-## How It Works
-
-### GitHub
-
-Use RiiSync to search for public repositories, browse users, or connect your own GitHub account using a Personal Access Token.
-
-If you have a Wii mod repository, you can manage it directly from RiiSync with familiar Git operations such as `pull`, `push`, and branch switching.
-
-### Modding
-
-You don't need a GitHub repository to use the Modding section.
-
-Simply select a mod folder stored locally on your device and connect it to Dolphin with a single click.
-
-RiiSync creates the required link and continuously watches the folder for changes.
-
-### Git + Modding
-
-For an even more powerful workflow, keep your mod inside your own GitHub repository.
-
-After pulling new changes from GitHub, RiiSync's live file watcher detects the updated files and automatically synchronizes them with Dolphin.
-
-This means your workflow can be as simple as:
-
-**GitHub → Pull → RiiSync detects changes → Dolphin is updated → Play.**
-
-### Riivolution
-
-When needed, you can open the Riivolution patch directly from the Modding section and modify it without leaving RiiSync.
 
 ---
 

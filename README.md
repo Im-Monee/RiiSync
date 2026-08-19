@@ -1,58 +1,57 @@
-# 🎮 RiiSync
+# RiiSync
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Android](https://img.shields.io/badge/Platform-Android-green.svg)](https://developer.android.com/)
-[![GitHub Release](https://img.shields.io/github/v/release/Im-Monee/RiiSync?color=blue)](https://github.com/Im-Monee/RiiSync/releases)
+[![Platform: Android](https://img.shields.io/badge/Platform-Android-green.svg)](https://developer.android.com/)
+[![GitHub Release](https://img.shields.io/github/v/release/Im-Monee/RiiSync?color=03A9F4)](https://github.com/Im-Monee/RiiSync/releases)
 
-**RiiSync** is a premium Android utility designed for the Wii modding community. It bridges the gap between your local mod development (Git) and the Dolphin emulator, providing a seamless synchronization and management experience.
-
----
-
-## ✨ Key Features
-
-- **🚀 High-Speed Git Integration**: Clone, pull, and manage your Riivolution mod repositories directly from GitHub.
-- **📁 Smart Mod Linking**: Automatically link and sync your local mod folders to Dolphin's internal directories using Shizuku.
-- **🖼️ Asset Hub**: Automated download of authentic animated Wii channel icons and high-resolution covers from GameTDB.
-- **⚡ Targeted Sync**: Save bandwidth and storage by downloading only the assets for the mods you actually have.
-- **🛡️ Secure Token Management**: Your GitHub credentials are stored safely in an encrypted hardware-backed vault.
-- **🌓 Adaptive UI**: Professional Material 3 design with full support for Light and Dark modes.
+RiiSync is a comprehensive Android utility designed for the Wii modding community. It facilitates seamless synchronization between local Git-based mod repositories and the Dolphin emulator environment, providing an integrated workflow for mod management, asset acquisition, and system integration.
 
 ---
 
-## 🛠️ Installation
+## Key Features
 
-1. Download the latest APK from the [**Releases**](https://github.com/Im-Monee/RiiSync/releases) page.
-2. Ensure you have [**Shizuku**](https://shizuku.rikka.app/) installed and running on your device (Required for folder linking).
-3. Open RiiSync and follow the interactive onboarding guide.
+### Git & Development Integration
+* **Synchronized Repositories**: Clone, pull, and manage Riivolution mod repositories directly within the application.
+* **Local Workspace Management**: Integrated file explorer and change tracker for local mod files.
+* **Commit & Push Support**: Complete Git workflow including staging changes, committing with descriptions, and pushing to remotes.
+* **Branch Management**: Fluid switching between development branches for complex modding projects.
+
+### Modding & Emulator Integration
+* **Privileged Linking**: Utilizes the Shizuku API to perform privileged filesystem operations, linking local mod folders directly to Dolphin's internal directories.
+* **Riivolution Support**: Advanced parsing of Riivolution XML patches with real-time integrity verification.
+* **Dolphin Environment Support**: Full compatibility with both Official Dolphin and MMJR2 (Medard22 VBI) builds.
+* **Smart Relocation**: Dynamically re-map mod source folders while automatically updating emulator links.
+
+### Asset & Database Management
+* **High-Speed Asset Sync**: Integrated Git-based synchronization for high-quality animated Wii channel icons.
+* **Automated Cover Fetching**: Real-time acquisition of vertical box art from GameTDB with multi-region support (EN, US, IT, DE, FR, ES, NL, PT, JA, KO, ZH).
+* **Targeted Asset Discovery**: Bandwidth-efficient mode that downloads only the icons and covers required for your synchronized mods.
+* **Live UI Refresh**: Instant updates of mod visuals without requiring application restarts or tab switching.
+
+### System & Security
+* **Hardware-Backed Security**: Encrypted storage of GitHub Personal Access Tokens using the Android Keystore system.
+* **Connection Intelligence**: Resilient network monitoring with automated state recovery and connection-aware action gating.
+* **Onboarding Experience**: Multi-stage interactive setup process to ensure environment health and proper permission configuration.
+* **Material 3 Design**: Professional, adaptive user interface with full optimization for both Light and Dark modes.
 
 ---
 
-## 📸 Screenshots
+## Installation
 
+1. Navigate to the [**Releases**](https://github.com/Im-Monee/RiiSync/releases) page.
+2. Download and install the latest `v1.0.0` APK matching your device architecture.
+3. Ensure the [**Shizuku**](https://shizuku.rikka.app/) service is active on your device.
+4. Follow the interactive setup guide upon initial launch.
+
+---
+
+## Credits
+
+* **Developer**: Mone
+* **Metadata & Assets**: Nintendo, GameTDB
+* **Core Libraries**: JGit, Shizuku, Jetpack Compose, Coil, Jsoup.
+
+---
 <p align="center">
-  <img src="https://via.placeholder.com/200x400?text=Git+Tab" width="200" />
-  <img src="https://via.placeholder.com/200x400?text=Modding+Tab" width="200" />
-  <img src="https://via.placeholder.com/200x400?text=Settings+Tab" width="200" />
-</p>
-
----
-
-## 📂 Repository Structure
-
-- `app/`: The core Android application source code.
-- `.github/workflows/`: Automation scripts for building and releasing APKs.
-- `database/`: (Integrated via RiiSync-DB repo) High-quality Wii assets.
-
----
-
-## ⚖️ Credits & Licenses
-
-- **Developed by**: Mone
-- **Icon Assets**: Nintendo (Preservation purposes)
-- **Metadata**: [GameTDB](https://www.gametdb.com/)
-- **Libraries**: JGit, Shizuku, Jetpack Compose, Coil.
-
----
-<p align="center">
-  Generated with ❤️ for the Wii Modding Community
+  <i>Providing an integrated modding experience for the Wii community.</i>
 </p>

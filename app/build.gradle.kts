@@ -13,7 +13,7 @@ android {
         minSdk = 26          // Shizuku richiede almeno API 24; usiamo 26 per sicurezza
         targetSdk = 35
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "1.0.0"
 
         ndk {
             abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))

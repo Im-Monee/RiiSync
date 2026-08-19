@@ -1,0 +1,57 @@
+name: Build & Release APK
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on tags starting with v (e.g., v0.1.0)
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
+
+      - name: Rename APKs for Release
+        run: |
+          cd app/build/outputs/apk/debug/
+          for file in *.apk; do
+            if [[ $file == *"universal"* ]]; then
+              mv "$file" "riisync_${{ github.ref_name }}_universal.apk"
+            elif [[ $file == *"arm64-v8a"* ]]; then
+              mv "$file" "riisync_${{ github.ref_name }}_arm64-v8a.apk"
+            elif [[ $file == *"armeabi-v7a"* ]]; then
+              mv "$file" "riisync_${{ github.ref_name }}_armeabi-v7a.apk"
+            elif [[ $file == *"x86_64"* ]]; then
+              mv "$file" "riisync_${{ github.ref_name }}_x86_64.apk"
+            elif [[ $file == *"x86"* ]]; then
+              mv "$file" "riisync_${{ github.ref_name }}_x86.apk"
+            fi
+          done
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app/build/outputs/apk/debug/*.apk
+          name: RiiSync Release ${{ github.ref_name }}
+          body: |
+            ## RiiSync Release ${{ github.ref_name }}
+            - Automatically built from GitHub Actions.
+            - Includes debug APK.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

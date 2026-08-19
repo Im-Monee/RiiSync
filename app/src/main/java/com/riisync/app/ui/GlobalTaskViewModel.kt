@@ -209,6 +209,8 @@ class GlobalTaskViewModel(application: Application) : AndroidViewModel(applicati
     var latestAppVersion by mutableStateOf<String?>(null)
     var appUpdateAvailable by mutableStateOf(false)
     var isCheckingForUpdates by mutableStateOf(false)
+    var showChangelog by mutableStateOf(false)
+    var changelogText by mutableStateOf("")
 
     /**
      * Checks for application updates from the GitHub repository.
@@ -225,6 +227,16 @@ class GlobalTaskViewModel(application: Application) : AndroidViewModel(applicati
                 
                 withContext(Dispatchers.Main) {
                     latestAppVersion = latest
+                    
+                    // Check if we just updated
+                    val lastKnown = settingsManager.lastKnownVersion.value
+                    if (lastKnown.isNotEmpty() && lastKnown != current) {
+                        fetchChangelog(settingsManager, current)
+                        settingsManager.setLastKnownVersion(current)
+                    } else if (lastKnown.isEmpty()) {
+                        settingsManager.setLastKnownVersion(current)
+                    }
+
                     if (latest != null && latest != current && latest.isNotEmpty()) {
                         appUpdateAvailable = true
                         if (!quiet) notify("New version $latest is available!", false)
@@ -239,6 +251,26 @@ class GlobalTaskViewModel(application: Application) : AndroidViewModel(applicati
                     if (!quiet) notify("Failed to check for updates: ${e.message}", true)
                     isCheckingForUpdates = false
                 }
+            }
+        }
+    }
+
+    /**
+     * Fetches the changelog (release notes) for a specific version.
+     */
+    private fun fetchChangelog(settingsManager: SettingsManager, version: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val service = GitHubService()
+                // Assuming release notes are in the latest release body or similar
+                val release = service.getLatestRelease("Im-Monee", "RiiSync", settingsManager.token.value.ifBlank { null })
+                val body = release?.optString("body", "No changelog available for this version.") ?: ""
+                withContext(Dispatchers.Main) {
+                    changelogText = body
+                    showChangelog = true
+                }
+            } catch (e: Exception) {
+                Log.e("RiiSync", "Failed to fetch changelog", e)
             }
         }
     }

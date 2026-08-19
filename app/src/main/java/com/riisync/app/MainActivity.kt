@@ -24,6 +24,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
@@ -169,6 +170,15 @@ class MainActivity : AppCompatActivity() {
                                     taskViewModel.clearNotification()
                                 }
                             }
+                        }
+
+                        // Changelog Dialog
+                        if (taskViewModel.showChangelog) {
+                            ChangelogDialog(
+                                version = com.riisync.app.BuildConfig.VERSION_NAME,
+                                notes = taskViewModel.changelogText,
+                                onDismiss = { taskViewModel.showChangelog = false }
+                            )
                         }
                     }
                 }
@@ -585,6 +595,46 @@ fun NotificationBanner(message: String?, isError: Boolean, onDismiss: () -> Unit
             }
         }
     }
+}
+
+/**
+ * A professional dialog that displays the latest changelog/release notes.
+ */
+@Composable
+fun ChangelogDialog(version: String, notes: String, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.NewReleases, null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(12.dp))
+                Text("What's New in v$version", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 400.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text(
+                    text = notes,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 20.sp
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Awesome!")
+            }
+        }
+    )
 }
 
 /**

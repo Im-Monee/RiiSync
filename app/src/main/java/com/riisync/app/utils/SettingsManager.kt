@@ -81,6 +81,9 @@ class SettingsManager(context: Context) {
     private val _showModScanWarning = mutableStateOf(prefs.getBoolean("show_mod_scan_warning", true))
     val showModScanWarning: State<Boolean> = _showModScanWarning
 
+    private val _lastKnownVersion = mutableStateOf(prefs.getString("last_known_version", "") ?: "")
+    val lastKnownVersion: State<String> = _lastKnownVersion
+
     /**
      * Metadata representing a mod linked and managed by the app.
      */
@@ -398,6 +401,14 @@ class SettingsManager(context: Context) {
     fun resetWarnings() {
         setShowModScanWarning(true)
         // Add more warnings here as they are implemented
+    }
+
+    /**
+     * Updates the last known application version.
+     */
+    fun setLastKnownVersion(version: String) {
+        _lastKnownVersion.value = version
+        prefs.edit().putString("last_known_version", version).apply()
     }
 
     /**

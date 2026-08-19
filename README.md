@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="app/src/main/res/drawable/banner.png" width="100%" />
+</p>
+
 # RiiSync
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)

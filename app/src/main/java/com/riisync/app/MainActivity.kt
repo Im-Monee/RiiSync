@@ -86,7 +86,10 @@ class MainActivity : AppCompatActivity() {
                 // 3. Refresh Shizuku status
                 ShizukuHelper.checkStatus(this@MainActivity)
 
-                // 4. Handle Storage Permission Changes
+                // 4. Check for App Updates (Quietly)
+                taskViewModel.checkForAppUpdates(settingsManager, quiet = true)
+
+                // 5. Handle Storage Permission Changes
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
                     val currentPermission = android.os.Environment.isExternalStorageManager()
                     if (hasPermission && !currentPermission) {

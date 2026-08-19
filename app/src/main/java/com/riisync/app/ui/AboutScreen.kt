@@ -48,12 +48,7 @@ fun AboutScreen(taskViewModel: GlobalTaskViewModel, settingsManager: SettingsMan
     val currentVersion = com.riisync.app.BuildConfig.VERSION_NAME
 
     LaunchedEffect(Unit) {
-        if (latestVersion == null) {
-            latestVersion = githubService.getLatestReleaseVersion(settingsManager.token.value)
-        }
-        if (latestVersion != null && latestVersion != currentVersion && latestVersion!!.isNotEmpty()) {
-            taskViewModel.setTabAttention(3, true)
-        }
+        taskViewModel.checkForAppUpdates(settingsManager, quiet = true)
     }
 
     Column(

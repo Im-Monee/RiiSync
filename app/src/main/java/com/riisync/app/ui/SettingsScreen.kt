@@ -457,6 +457,68 @@ fun SettingsScreen(settingsManager: SettingsManager, taskViewModel: GlobalTaskVi
                 ) { Text(stringResource(R.string.open_shizuku_manager), color = Color.White) }
                 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
+                // --- APP UPDATE SECTION ---
+                Column {
+                    Text("Application Updates", style = MaterialTheme.typography.bodyLarge)
+                    Text("Keep RiiSync up to date with the latest features and fixes.", style = MaterialTheme.typography.bodySmall)
+                    
+                    val updateAvailable = taskViewModel.appUpdateAvailable
+                    val isChecking = taskViewModel.isCheckingForUpdates
+                    val latestVersion = taskViewModel.latestAppVersion
+                    
+                    if (updateAvailable) {
+                        Surface(
+                            color = Color(0xFFFFF9C4),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.padding(top = 8.dp).fillMaxWidth()
+                        ) {
+                            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Update, null, tint = Color(0xFFF9A825))
+                                Spacer(Modifier.width(12.dp))
+                                Column {
+                                    Text("New Update Available: $latestVersion", fontWeight = FontWeight.Bold, color = Color(0xFFF9A825))
+                                    Text("Download now to get the latest improvements.", style = MaterialTheme.typography.labelSmall, color = Color.DarkGray)
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val updateAvailable = taskViewModel.appUpdateAvailable
+                    val isChecking = taskViewModel.isCheckingForUpdates
+                    
+                    Button(
+                        onClick = { 
+                            if (updateAvailable) {
+                                taskViewModel.performAppUpdate(settingsManager)
+                            } else {
+                                taskViewModel.checkForAppUpdates(settingsManager)
+                            }
+                        },
+                        enabled = !taskViewModel.isOperating,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (updateAvailable) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        if (isChecking) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
+                        } else {
+                            Icon(
+                                if (updateAvailable) Icons.Default.SystemUpdateAlt else Icons.Default.Search, 
+                                contentDescription = null, 
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (updateAvailable) "Update Now" else "Check for Updates", color = Color.White)
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
                 
                 Column {
                     Text(stringResource(R.string.clean_app_cache), style = MaterialTheme.typography.bodyLarge)
@@ -473,6 +535,68 @@ fun SettingsScreen(settingsManager: SettingsManager, taskViewModel: GlobalTaskVi
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) { Text(stringResource(R.string.clean_app_cache), color = Color.White) }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
+                // --- APP UPDATE SECTION ---
+                Column {
+                    Text("Application Updates", style = MaterialTheme.typography.bodyLarge)
+                    Text("Keep RiiSync up to date with the latest features and fixes.", style = MaterialTheme.typography.bodySmall)
+                    
+                    val updateAvailable = taskViewModel.appUpdateAvailable
+                    val isChecking = taskViewModel.isCheckingForUpdates
+                    val latestVersion = taskViewModel.latestAppVersion
+                    
+                    if (updateAvailable) {
+                        Surface(
+                            color = Color(0xFFFFF9C4),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.padding(top = 8.dp).fillMaxWidth()
+                        ) {
+                            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Update, null, tint = Color(0xFFF9A825))
+                                Spacer(Modifier.width(12.dp))
+                                Column {
+                                    Text("New Update Available: $latestVersion", fontWeight = FontWeight.Bold, color = Color(0xFFF9A825))
+                                    Text("Download now to get the latest improvements.", style = MaterialTheme.typography.labelSmall, color = Color.DarkGray)
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val updateAvailable = taskViewModel.appUpdateAvailable
+                    val isChecking = taskViewModel.isCheckingForUpdates
+                    
+                    Button(
+                        onClick = { 
+                            if (updateAvailable) {
+                                taskViewModel.performAppUpdate(settingsManager)
+                            } else {
+                                taskViewModel.checkForAppUpdates(settingsManager)
+                            }
+                        },
+                        enabled = !taskViewModel.isOperating,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (updateAvailable) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        if (isChecking) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
+                        } else {
+                            Icon(
+                                if (updateAvailable) Icons.Default.SystemUpdateAlt else Icons.Default.Search, 
+                                contentDescription = null, 
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (updateAvailable) "Update Now" else "Check for Updates", color = Color.White)
+                    }
+                }
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
 
@@ -594,6 +718,68 @@ fun SettingsScreen(settingsManager: SettingsManager, taskViewModel: GlobalTaskVi
                     Icon(Icons.Default.DeleteSweep, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.White)
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.clear_db), color = Color.White)
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
+                // --- APP UPDATE SECTION ---
+                Column {
+                    Text("Application Updates", style = MaterialTheme.typography.bodyLarge)
+                    Text("Keep RiiSync up to date with the latest features and fixes.", style = MaterialTheme.typography.bodySmall)
+                    
+                    val updateAvailable = taskViewModel.appUpdateAvailable
+                    val isChecking = taskViewModel.isCheckingForUpdates
+                    val latestVersion = taskViewModel.latestAppVersion
+                    
+                    if (updateAvailable) {
+                        Surface(
+                            color = Color(0xFFFFF9C4),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.padding(top = 8.dp).fillMaxWidth()
+                        ) {
+                            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Update, null, tint = Color(0xFFF9A825))
+                                Spacer(Modifier.width(12.dp))
+                                Column {
+                                    Text("New Update Available: $latestVersion", fontWeight = FontWeight.Bold, color = Color(0xFFF9A825))
+                                    Text("Download now to get the latest improvements.", style = MaterialTheme.typography.labelSmall, color = Color.DarkGray)
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val updateAvailable = taskViewModel.appUpdateAvailable
+                    val isChecking = taskViewModel.isCheckingForUpdates
+                    
+                    Button(
+                        onClick = { 
+                            if (updateAvailable) {
+                                taskViewModel.performAppUpdate(settingsManager)
+                            } else {
+                                taskViewModel.checkForAppUpdates(settingsManager)
+                            }
+                        },
+                        enabled = !taskViewModel.isOperating,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (updateAvailable) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        if (isChecking) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
+                        } else {
+                            Icon(
+                                if (updateAvailable) Icons.Default.SystemUpdateAlt else Icons.Default.Search, 
+                                contentDescription = null, 
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (updateAvailable) "Update Now" else "Check for Updates", color = Color.White)
+                    }
                 }
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))

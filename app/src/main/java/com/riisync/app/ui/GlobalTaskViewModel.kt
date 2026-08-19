@@ -207,6 +207,66 @@ class GlobalTaskViewModel(application: Application) : AndroidViewModel(applicati
 
     /** PERSISTENT ABOUT TAB STATE */
     var latestAppVersion by mutableStateOf<String?>(null)
+    var appUpdateAvailable by mutableStateOf(false)
+    var isCheckingForUpdates by mutableStateOf(false)
+
+    /**
+     * Checks for application updates from the GitHub repository.
+     */
+    fun checkForAppUpdates(settingsManager: SettingsManager, quiet: Boolean = false) {
+        if (isCheckingForUpdates) return
+        isCheckingForUpdates = true
+        
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val service = GitHubService()
+                val latest = service.getLatestReleaseVersion(settingsManager.token.value.ifBlank { null })
+                val current = com.riisync.app.BuildConfig.VERSION_NAME
+                
+                withContext(Dispatchers.Main) {
+                    latestAppVersion = latest
+                    if (latest != null && latest != current && latest.isNotEmpty()) {
+                        appUpdateAvailable = true
+                        if (!quiet) notify("New version $latest is available!", false)
+                        setTabAttention(2, true) // Highlight Settings tab
+                    } else if (!quiet) {
+                        notify("RiiSync is up to date.", false)
+                    }
+                    isCheckingForUpdates = false
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    if (!quiet) notify("Failed to check for updates: ${e.message}", true)
+                    isCheckingForUpdates = false
+                }
+            }
+        }
+    }
+
+    /**
+     * Downloads and installs the latest application update.
+     */
+    fun performAppUpdate(settingsManager: SettingsManager) {
+        val context = getApplication<Application>()
+        
+        runSimpleTask("Updating RiiSync", type = TaskType.SYSTEM) { task ->
+            com.riisync.app.utils.ApkDownloader.downloadFromGitHub(
+                context = context,
+                owner = "Im-Monee",
+                repo = "RiiSync",
+                fileName = "riisync_update.apk",
+                token = settingsManager.token.value.ifBlank { null },
+                onProgress = { task.progress.value = it },
+                onComplete = { file ->
+                    task.currentSubTask.value = "Starting installer..."
+                    com.riisync.app.utils.ApkDownloader.installApk(context, file)
+                },
+                onError = { error ->
+                    notify("Update failed: $error", true)
+                }
+            )
+        }
+    }
 
     /** Countdown timer for network reconnection attempts. */
     var connectionLostTimer by mutableIntStateOf(0)

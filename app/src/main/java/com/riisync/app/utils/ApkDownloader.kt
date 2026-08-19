@@ -54,7 +54,7 @@ object ApkDownloader {
     }
 
     /**
-     * Downloads an APK from a GitHub repository's latest release.
+     * Downloads an APK from a GitHub repository's latest release, choosing the correct architecture.
      */
     suspend fun downloadFromGitHub(
         context: Context,
@@ -72,16 +72,25 @@ object ApkDownloader {
             val assets = release.getJSONArray("assets")
             var downloadUrl: String? = null
             
+            // 1. Identify device architecture
+            val abi = Build.SUPPORTED_ABIS.firstOrNull() ?: "universal"
+            android.util.Log.d("ApkDownloader", "Device ABI: $abi")
+
+            val assetList = mutableListOf<JSONObject>()
             for (i in 0 until assets.length()) {
                 val asset = assets.getJSONObject(i)
-                val assetName = asset.getString("name")
-                if (assetName.endsWith(".apk", ignoreCase = true)) {
-                    downloadUrl = asset.getString("browser_download_url")
-                    break
+                if (asset.getString("name").endsWith(".apk", ignoreCase = true)) {
+                    assetList.add(asset)
                 }
             }
 
-            if (downloadUrl == null) throw Exception("No APK found in $owner/$repo release")
+            // 2. Filter for best match
+            // Preference: Specific ABI > Universal > First APK found
+            downloadUrl = assetList.find { it.getString("name").contains(abi, ignoreCase = true) }?.getString("browser_download_url")
+                ?: assetList.find { it.getString("name").contains("universal", ignoreCase = true) }?.getString("browser_download_url")
+                ?: assetList.firstOrNull()?.getString("browser_download_url")
+
+            if (downloadUrl == null) throw Exception("No compatible APK found in $owner/$repo release")
             downloadDirect(context, downloadUrl, fileName, onProgress, onComplete, onError)
         } catch (e: Exception) {
             withContext(Dispatchers.Main) { onError(e.message ?: "GitHub download failed") }

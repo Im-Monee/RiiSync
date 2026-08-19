@@ -119,4 +119,6 @@ RiiSync includes a dedicated artwork database for your Wii games and mods.
 ---
 <p align="center">
   <i>Providing an integrated modding experience for the Wii community.</i>
+  <br>
+  <i><b>AI was used in the making of this software.</i></b>
 </p>

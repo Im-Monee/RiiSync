@@ -62,8 +62,8 @@ Use the integrated GitHub features, add your mods to Dolphin with ease, manage y
 
 ## Installation
 
-1. Grab the latest APK for your device's architecture from the [Releases](https://github.com/Im-Monee/RiiSync/releases) page (currently **v1.0.1**).
-2. Install it, then make sure [Shizuku](https://shizuku.rikka.app/) is running — RiiSync needs it to link mods to Dolphin.
+1. Grab the latest APK for your device's architecture from the [Releases](https://github.com/Im-Monee/RiiSync/releases) page. (currently **v1.0.1**)
+2. Install it, then make sure [Shizuku](https://shizuku.rikka.app/) is running: RiiSync needs it to link mods to Dolphin.
 3. Open the app and follow the setup wizard; it'll check permissions and get everything ready.
 
 ---
@@ -74,7 +74,7 @@ All of the app's core functionality was generated with AI. I'm not a developer, 
 
 - **Deprecated classes**: Removed all of them from the codebase, thanks to reports from the Discord community — I'll keep doing this if more get flagged.
 - **Reading the code**: I went through the generated code via the `//` comments to understand what each part was doing, then fixed UI layout issues, dark/light mode color problems, and text formatting/strings by hand. That's about the ceiling of what my own knowledge allows for right now.
-- **Icon & cover database**: This one is entirely mine; I used [MarioCube's repository](https://repo.mariocube.com/) and gcbanner tool to extract the animated icons that show up on the Wii's own Channel Settings screen from save files, then hosted them on my own repository. I later had the AI wire up a fetch from that repository, plus a GameTDB scan to pull the matching cover art by game ID and region.
+- **Icon & cover database**: This one is entirely mine; I used [MarioCube's repository](https://repo.mariocube.com/) and [gcbanner](https://github.com/GerbilSoft/mcrecover) tool to extract the animated icons that show up on the Wii's own Channel Settings screen from save files, then hosted them on my own repository. I later had the AI wire up a fetch from that repository, plus a GameTDB scan to pull the matching cover art by game ID and region.
 - **Testing & debugging**: All done on my own physical phone, plus additional testing on other devices to fix the UI on larger screens.
 
 ---

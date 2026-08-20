@@ -55,7 +55,7 @@ import java.io.File
  */
 @Composable
 fun OnboardingScreen(settingsManager: SettingsManager, taskViewModel: GlobalTaskViewModel, onFinish: () -> Unit) {
-    val pagerState = rememberPagerState(pageCount = { 7 })
+    val pagerState = rememberPagerState(pageCount = { 6 })
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val isDark by settingsManager.isDarkTheme
@@ -95,7 +95,7 @@ fun OnboardingScreen(settingsManager: SettingsManager, taskViewModel: GlobalTask
                     .padding(top = 48.dp, start = 24.dp, end = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                repeat(7) { index ->
+                repeat(6) { index ->
                     val progress by animateFloatAsState(
                         targetValue = if (index <= pagerState.currentPage) 1f else 0f,
                         animationSpec = tween(500)
@@ -122,9 +122,8 @@ fun OnboardingScreen(settingsManager: SettingsManager, taskViewModel: GlobalTask
                     1 -> HealthCheckStage(taskViewModel)
                     2 -> GitHubLinkStage(settingsManager, taskViewModel)
                     3 -> PermissionStage(hasPermission, isDark)
-                    4 -> StorageAnchorStage(settingsManager)
-                    5 -> DatabaseSetupStage(settingsManager, taskViewModel)
-                    6 -> AppearanceStage(settingsManager)
+                    4 -> DatabaseSetupStage(settingsManager, taskViewModel)
+                    5 -> AppearanceStage(settingsManager)
                 }
             }
 
@@ -160,7 +159,7 @@ fun OnboardingScreen(settingsManager: SettingsManager, taskViewModel: GlobalTask
                 Button(
                     enabled = canContinue,
                     onClick = {
-                        if (pagerState.currentPage < 6) {
+                        if (pagerState.currentPage < 5) {
                             scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
                         } else {
                             settingsManager.setOnboardingComplete(true)
@@ -170,13 +169,13 @@ fun OnboardingScreen(settingsManager: SettingsManager, taskViewModel: GlobalTask
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.height(56.dp).weight(1f).padding(start = 16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (pagerState.currentPage == 6) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary,
+                        containerColor = if (pagerState.currentPage == 5) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary,
                         disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 ) {
-                    val isGetStarted = pagerState.currentPage == 6
+                    val isGetStarted = pagerState.currentPage == 5
                     val contentColor = if (isGetStarted) Color.White else if (isDark) Color.White else Color.White
-                    
+                     
                     Text(
                         if (isGetStarted) stringResource(R.string.onboarding_get_started) else stringResource(R.string.onboarding_next_step),
                         color = if (canContinue) contentColor else Color.Gray,
@@ -208,11 +207,11 @@ fun IntroStage() {
     )
 
     val subtitles = listOf(
-        "Your all-in-one Wii game modding utility.",
-        "Synchronize with GitHub in one click.",
-        "Keep your Dolphin mods always up to date.",
-        "Manage game files, XMLs, and more.",
-        "Designed for modders, by Wii lovers."
+        "All of your modding needings, in one place.",
+        "Deep search on Github and manage your stuff with ease.",
+        "Tune your mods with Dolphin, always, and everywhere.",
+        "Manage your XML patch files.",
+        "Designed with love for the community."
     )
     
     var subtitleIndex by remember { mutableIntStateOf(0) }
@@ -332,7 +331,7 @@ fun HealthCheckStage(taskViewModel: GlobalTaskViewModel) {
             status = if (isDolphinInstalled || isMMJR2Installed) stringResource(R.string.onboarding_status_installed) else stringResource(R.string.onboarding_status_missing),
             isHealthy = isDolphinInstalled || isMMJR2Installed,
             icon = painterResource(R.drawable.ic_dolphin),
-            description = "Either Official Dolphin or MMJR2 is required to play mods."
+            description = "Either Official or MMJR2 Dolphin version is required to manage your mod syncs."
         )
         
         Spacer(Modifier.height(16.dp))
@@ -342,7 +341,7 @@ fun HealthCheckStage(taskViewModel: GlobalTaskViewModel) {
             status = if (taskViewModel.internetConnected) "Ready" else stringResource(R.string.onboarding_status_limited),
             isHealthy = taskViewModel.internetConnected,
             icon = Icons.Default.Public,
-            description = if (taskViewModel.internetConnected) "Device is connected to the internet." else "Internet connection is required for GitHub sync."
+            description = if (taskViewModel.internetConnected) "Device is connected to the internet." else "Internet connection is required for accessing Github features and more."
         )
     }
 }
@@ -351,7 +350,7 @@ fun HealthCheckStage(taskViewModel: GlobalTaskViewModel) {
 fun HealthItem(title: String, status: String, isHealthy: Boolean, icon: Any, description: String, isWarning: Boolean = false) {
     val statusColor = when {
         isWarning -> Color(0xFFE6A700)
-        isHealthy -> Color(0xFF2E7D32)
+        isHealthy -> Color(0xFF1976D2)
         else -> Color(0xFFD32F2F)
     }
     
@@ -401,6 +400,7 @@ fun GitHubLinkStage(settingsManager: SettingsManager, taskViewModel: GlobalTaskV
     
     val githubService = remember { GitHubService() }
     val username by settingsManager.username
+    val context = LocalContext.current
 
     // Automatic verification logic when token changes - Only if the token was actually edited
     LaunchedEffect(token) {
@@ -427,13 +427,37 @@ fun GitHubLinkStage(settingsManager: SettingsManager, taskViewModel: GlobalTaskV
 
         Spacer(Modifier.height(32.dp))
 
+        // --- GITHUB & GIT IDENTITY (shared with Settings) ---
+        var authorName by remember { mutableStateOf(settingsManager.authorName.value) }
+        var authorEmail by remember { mutableStateOf(settingsManager.authorEmail.value) }
+        var rootFolder by remember { mutableStateOf(settingsManager.rootCloneFolder.value) }
+
+        val dirLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+            uri?.let {
+                        val path = PathUtils.getAbsolutePath(context, it)
+                if (path != null) {
+                    rootFolder = path
+                    settingsManager.setRootCloneFolder(path)
+                }
+            }
+        }
+
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                    alpha = 0.1f
+                )
+            )
         ) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {}
+
                 if (checkResult == true && username.isNotBlank()) {
                     Row(
                         modifier = Modifier
@@ -443,7 +467,11 @@ fun GitHubLinkStage(settingsManager: SettingsManager, taskViewModel: GlobalTaskV
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Icon(
+                            Icons.Default.Person,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                         Spacer(Modifier.width(12.dp))
                         Text(
                             text = stringResource(R.string.logged_as, username),
@@ -456,21 +484,20 @@ fun GitHubLinkStage(settingsManager: SettingsManager, taskViewModel: GlobalTaskV
 
                 OutlinedTextField(
                     value = token,
-                    onValueChange = { 
+                    onValueChange = {
                         token = it
-                        // Important: Only reset checkResult if the user is typing something new
-                        // This prevents the button from flickering if the value is restored
                         if (it != settingsManager.token.value) {
-                            checkResult = null 
+                            checkResult = null
                         }
                     },
                     label = { Text(stringResource(R.string.pat)) },
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    leadingIcon = { Icon(painterResource(R.drawable.ic_github), contentDescription = null, modifier = Modifier.size(20.dp)) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
                     trailingIcon = {
                         if (token.isNotEmpty()) {
-                            IconButton(onClick = { 
+                            IconButton(onClick = {
                                 token = ""
                                 checkResult = null
                                 settingsManager.setGitHubCredentials("", "")
@@ -478,13 +505,11 @@ fun GitHubLinkStage(settingsManager: SettingsManager, taskViewModel: GlobalTaskV
                                 Icon(Icons.Default.Close, contentDescription = "Clear")
                             }
                         }
-                    },
-                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+                    }
                 )
 
                 // Dynamic PAT Guide: Only show when failed or waiting for input
                 if (checkResult != true && !isChecking) {
-                    Spacer(Modifier.height(8.dp))
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -493,9 +518,18 @@ fun GitHubLinkStage(settingsManager: SettingsManager, taskViewModel: GlobalTaskV
                             .padding(16.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.AutoMirrored.Filled.Help, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.secondary)
+                            Icon(
+                                Icons.AutoMirrored.Filled.Help,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
                             Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.pat_guide_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            Text(
+                                stringResource(R.string.pat_guide_title),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                         Text(
                             stringResource(R.string.pat_guide_steps),
@@ -508,10 +542,10 @@ fun GitHubLinkStage(settingsManager: SettingsManager, taskViewModel: GlobalTaskV
 
                 // Status Viewer (Automatic)
                 Surface(
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    color = when(checkResult) {
-                        true -> Color(0xFF2E7D32)
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = when (checkResult) {
+                        true -> Color(0xFF1976D2)
                         false -> if (token.isNotBlank()) Color(0xFFD32F2F) else MaterialTheme.colorScheme.surfaceVariant
                         else -> MaterialTheme.colorScheme.surfaceVariant
                     }
@@ -519,32 +553,66 @@ fun GitHubLinkStage(settingsManager: SettingsManager, taskViewModel: GlobalTaskV
                     Box(contentAlignment = Alignment.Center) {
                         if (isChecking) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
-                                Spacer(Modifier.width(12.dp))
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(Modifier.width(8.dp))
                                 Text("Verifying...", color = Color.White)
                             }
                         } else {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                val icon = when(checkResult) {
+                                val icon = when (checkResult) {
                                     true -> Icons.Default.CheckCircle
                                     false -> if (token.isNotBlank()) Icons.Default.Error else Icons.Default.CloudSync
                                     else -> Icons.Default.CloudSync
                                 }
-                                Icon(icon, contentDescription = null, tint = if (checkResult == null) MaterialTheme.colorScheme.onSurfaceVariant else Color.White)
+                                Icon(
+                                    icon,
+                                    contentDescription = null,
+                                    tint = if (checkResult == null) MaterialTheme.colorScheme.onSurfaceVariant else Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
                                 Spacer(Modifier.width(12.dp))
                                 Text(
-                                    text = when(checkResult) {
+                                    text = when (checkResult) {
                                         true -> stringResource(R.string.onboarding_verified)
                                         false -> if (token.isNotBlank()) stringResource(R.string.onboarding_failed) else "Waiting for input..."
                                         else -> "Waiting for input..."
                                     },
                                     color = if (checkResult == null) MaterialTheme.colorScheme.onSurfaceVariant else Color.White,
+                                    style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
                         }
                     }
                 }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    stringResource(R.string.default_clone_folder),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                OutlinedTextField(
+                    value = rootFolder,
+                    onValueChange = {},
+                    modifier = Modifier.fillMaxWidth(),
+                    readOnly = true,
+                    shape = RoundedCornerShape(12.dp),
+                    trailingIcon = {
+                        IconButton(onClick = { dirLauncher.launch(null) }) {
+                            Icon(
+                                Icons.Default.FolderOpen,
+                                contentDescription = "Browse"
+                            )
+                        }
+                    }
+                )
             }
         }
     }
@@ -709,68 +777,7 @@ fun PermissionStage(hasPermission: Boolean, isDark: Boolean) {
 }
 
 /**
- * Stage 5: Storage Anchor
- */
-@Composable
-fun StorageAnchorStage(settingsManager: SettingsManager) {
-    val context = LocalContext.current
-    var rootFolder by remember { mutableStateOf(settingsManager.rootCloneFolder.value) }
-
-    val dirLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-        uri?.let {
-            val path = PathUtils.getAbsolutePath(context, it)
-            if (path != null) {
-                rootFolder = path
-                settingsManager.setRootCloneFolder(path)
-            }
-        }
-    }
-
-    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
-        Text(stringResource(R.string.onboarding_anchor_title), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-        Text(stringResource(R.string.onboarding_anchor_desc), style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-
-        Spacer(Modifier.height(40.dp))
-
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                .clickable { dirLauncher.launch(null) }
-                .padding(24.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Default.FolderSpecial, contentDescription = null, size = 64.dp, tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    rootFolder.substringAfterLast("/", stringResource(R.string.onboarding_change_folder)),
-                    fontWeight = FontWeight.ExtraBold,
-                    style = MaterialTheme.typography.titleLarge
-                )
-                Text(rootFolder, style = MaterialTheme.typography.labelSmall, color = Color.Gray, textAlign = TextAlign.Center)
-                
-                Spacer(Modifier.height(16.dp))
-                
-                Surface(
-                    color = MaterialTheme.colorScheme.primary,
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(stringResource(R.string.onboarding_change_folder), modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), color = Color.White, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun Icon(imageVector: ImageVector, contentDescription: String?, size: androidx.compose.ui.unit.Dp, tint: Color) {
-    Icon(imageVector, contentDescription, modifier = Modifier.size(size), tint = tint)
-}
-
-/**
- * Stage 6: Database Setup
+ * Stage 5: Database Setup
  */
 @Composable
 fun DatabaseSetupStage(settingsManager: SettingsManager, taskViewModel: GlobalTaskViewModel) {
@@ -788,46 +795,69 @@ fun DatabaseSetupStage(settingsManager: SettingsManager, taskViewModel: GlobalTa
         Spacer(Modifier.height(48.dp))
 
         if (iconCount > 0 || coverCount > 0) {
+            // Use same green as Finish Setup (0xFF2E7D32)
+            val successColor = Color(0xFF2E7D32)
             Surface(
-                color = Color(0xFFE8F5E9),
+                color = successColor.copy(alpha = 0.12f),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF2E7D32))
+                        Icon(Icons.Default.CheckCircle, null, tint = successColor)
                         Spacer(Modifier.width(12.dp))
-                        Text("Database Ready", color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
+                        Text("Database Ready", color = successColor, fontWeight = FontWeight.Bold)
                     }
                     val total = iconCount + coverCount
                     Text(
                         "$iconCount ${if (iconCount == 1) "Icon" else "Icons"} • $coverCount ${if (coverCount == 1) "Cover" else "Covers"} ($total Total)", 
                         style = MaterialTheme.typography.labelSmall, 
-                        color = Color(0xFF2E7D32).copy(alpha = 0.7f)
+                        color = successColor.copy(alpha = 0.7f)
                     )
                 }
             }
         } else {
-            Button(
-                onClick = { taskViewModel.buildGameDatabase(settingsManager, mode = "EVERYTHING") },
-                enabled = !isDbActive,
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth().height(56.dp)
-            ) {
-                if (isDbActive) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
-                } else {
-                    Icon(Icons.Default.Download, null)
-                    Spacer(Modifier.width(12.dp))
-                    Text("Download Full Database", fontWeight = FontWeight.Bold)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                AnimatedVisibility(
+                    visible = isDbActive,
+                    enter = fadeIn(animationSpec = tween(600)),
+                    exit = fadeOut()
+                ) {
+                    Text(
+                        "You can continue with the onboarding.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+
+                Button(
+                    onClick = { taskViewModel.buildGameDatabase(settingsManager, mode = "EVERYTHING") },
+                    enabled = !isDbActive,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    if (isDbActive) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                            Spacer(Modifier.width(12.dp))
+                            Text("Downloading...", fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                    } else {
+                        Icon(Icons.Default.Download, null)
+                        Spacer(Modifier.width(12.dp))
+                        Text("Download Full Database", fontWeight = FontWeight.Bold, color = Color.White)
+                    }
                 }
             }
-            Text("Approx. 80MB download", style = MaterialTheme.typography.labelSmall, color = Color.Gray, modifier = Modifier.padding(top = 8.dp))
         }
     }
 }
 
 /**
- * Stage 7: Appearance stage
+ * Stage 6: Appearance stage
  */
 @Composable
 fun AppearanceStage(settingsManager: SettingsManager) {
@@ -889,9 +919,10 @@ fun ThemeCard(title: String, isSelected: Boolean, icon: ImageVector, onClick: ()
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(icon, contentDescription = null, size = 32.dp, tint = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray)
+            Icon(icon, contentDescription = null, modifier = Modifier.size(32.dp), tint = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray)
             Spacer(Modifier.height(8.dp))
             Text(title, fontWeight = FontWeight.Bold, color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else Color.Gray)
         }
     }
 }
+

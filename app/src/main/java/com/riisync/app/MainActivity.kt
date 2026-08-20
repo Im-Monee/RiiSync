@@ -14,6 +14,8 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -172,11 +174,12 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
 
-                        // Changelog Dialog
+                        // Changelog Screen
                         if (taskViewModel.showChangelog) {
-                            ChangelogDialog(
+                            ChangelogScreen(
                                 version = com.riisync.app.BuildConfig.VERSION_NAME,
                                 notes = taskViewModel.changelogText,
+                                isDark = isDark,
                                 onDismiss = { taskViewModel.showChangelog = false }
                             )
                         }
@@ -344,7 +347,7 @@ fun AppRoot(settingsManager: SettingsManager, taskViewModel: GlobalTaskViewModel
                         .animateContentSize()
                 ) {
                     taskViewModel.activeTasks.forEach { task ->
-                        TaskProgressItem(task, onCancel = { taskViewModel.cancelTask(task.id) })
+                        TaskProgressItem(task, onCancel = { taskViewModel.cancelTask(task.id, settingsManager) })
                     }
                     if (taskViewModel.queuedTasks.isNotEmpty()) {
                         Text(
@@ -425,16 +428,18 @@ fun TaskProgressItem(task: TaskInfo, onCancel: () -> Unit) {
                     maxLines = 1
                 )
             }
-            IconButton(
-                onClick = onCancel,
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(
-                    Icons.Default.Close, 
-                    contentDescription = "Cancel", 
-                    modifier = Modifier.size(14.dp),
-                    tint = Color.Gray
-                )
+            if (!(task.type == TaskType.SYSTEM && (task.title.contains("Icon") || task.title.contains("DB")))) {
+                IconButton(
+                    onClick = onCancel,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Close, 
+                        contentDescription = "Cancel", 
+                        modifier = Modifier.size(14.dp),
+                        tint = Color.Gray
+                    )
+                }
             }
         }
     }
@@ -598,43 +603,62 @@ fun NotificationBanner(message: String?, isError: Boolean, onDismiss: () -> Unit
 }
 
 /**
- * A professional dialog that displays the latest changelog/release notes.
+ * A professional full-screen page that displays the latest changelog/release notes.
  */
 @Composable
-fun ChangelogDialog(version: String, notes: String, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.NewReleases, null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(12.dp))
-                Text("What's New in v$version", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            }
-        },
-        text = {
-            Column(
+fun ChangelogScreen(version: String, notes: String, isDark: Boolean, onDismiss: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxSize().zIndex(200f),
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Header with Back Arrow
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 400.dp)
-                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 8.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack, 
+                        contentDescription = "Back",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
                 Text(
-                    text = notes,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 20.sp
+                    "What's New",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
-        },
-        confirmButton = {
+            
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+            // Scrollable Content
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                HtmlReadmeViewer(html = notes, isDark = isDark)
+            }
+            
+            // Bottom Action Button
             Button(
                 onClick = onDismiss,
-                shape = RoundedCornerShape(12.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Text("Awesome!")
+                Text("Continue to RiiSync", fontWeight = FontWeight.Bold)
             }
         }
-    )
+    }
 }
 
 /**

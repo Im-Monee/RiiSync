@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 class GameDatabaseBuilder(private val context: Context) {
 
-    private val baseRiisyncDir = File(android.os.Environment.getExternalStorageDirectory(), "RiiSync")
+    private val baseRiisyncDir = File("/storage/emulated/0", "RiiSync")
     private val databaseDir = File(baseRiisyncDir, "database").apply { mkdirs() }
     private val coversDir = File(databaseDir, "GameTDBcovers").apply { mkdirs() }
     
@@ -40,10 +40,10 @@ class GameDatabaseBuilder(private val context: Context) {
      * Downloads the entire database folder from the GitHub repository.
      */
     suspend fun downloadEverything(task: TaskInfo, settingsManager: SettingsManager) = coroutineScope {
-        task.currentSubTask.value = "Cloning entire database..."
+        task.currentSubTask.value = "Connecting to GitHub..."
         task.progress.value = -1f
         
-        val tempRepoDir = File(context.cacheDir, "temp_db_repo")
+        val tempRepoDir = File(context.cacheDir, "temp_db_repo_${System.currentTimeMillis()}")
         if (tempRepoDir.exists()) tempRepoDir.deleteRecursively()
 
         val cloneResult = gitManager.clone(
@@ -54,7 +54,9 @@ class GameDatabaseBuilder(private val context: Context) {
                 override fun beginTask(title: String?, totalWork: Int) {
                     task.currentSubTask.value = title ?: "Downloading..."
                 }
-                override fun update(completed: Int) {}
+                override fun update(completed: Int) {
+                    // Update progress if totalWork is known
+                }
                 override fun endTask() {}
                 override fun isCancelled(): Boolean = task.job?.isCancelled == true
                 override fun showDuration(enabled: Boolean) {}
@@ -65,12 +67,37 @@ class GameDatabaseBuilder(private val context: Context) {
             task.currentSubTask.value = "Extracting icons..."
             val repoDbFolder = File(tempRepoDir, "database")
             if (repoDbFolder.exists()) {
-                repoDbFolder.copyRecursively(databaseDir, overwrite = true)
-                task.currentSubTask.value = "Database successfully downloaded!"
+                try {
+                    // Create destination if it doesn't exist
+                    if (!databaseDir.exists()) databaseDir.mkdirs()
+
+                    val items = repoDbFolder.listFiles() ?: emptyArray()
+                    items.forEachIndexed { index, file ->
+                        task.currentSubTask.value = "Extracting: ${file.name}"
+                        task.progress.value = index.toFloat() / items.size
+                        
+                        if (file.isDirectory) {
+                            file.copyRecursively(File(databaseDir, file.name), overwrite = true)
+                        } else {
+                            file.copyTo(File(databaseDir, file.name), overwrite = true)
+                        }
+                    }
+                    task.currentSubTask.value = "Database successfully extracted!"
+                } catch (e: Exception) {
+                    android.util.Log.e("RiiSync", "Extraction failed", e)
+                    task.currentSubTask.value = "Extraction failed: ${e.localizedMessage}"
+                    tempRepoDir.deleteRecursively()
+                    task.progress.value = 1f
+                    return@coroutineScope
+                }
             } else {
                 task.currentSubTask.value = "Error: Repository structure invalid."
             }
-            tempRepoDir.deleteRecursively()
+            
+            // Clean up temp repo after successful extraction
+            withContext(Dispatchers.IO) {
+                try { tempRepoDir.deleteRecursively() } catch (e: Exception) {}
+            }
             
             // NEW: Grab every cover from GameTDB
             task.currentSubTask.value = "Fetching covers from GameTDB..."
@@ -240,16 +267,29 @@ class GameDatabaseBuilder(private val context: Context) {
         return try {
             val conn = URL(url).openConnection() as java.net.HttpURLConnection
             conn.connectTimeout = 5000
-            conn.readTimeout = 5000
+            conn.readTimeout = 10000 // Increased timeout for larger files
+            
             if (conn.responseCode == 200) {
+                // To prevent "Incomplete Copy" errors, we use a temporary staging file
+                val stagingFile = File(destination.absolutePath + ".tmp")
                 conn.inputStream.use { input ->
-                    FileOutputStream(destination).use { output ->
+                    FileOutputStream(stagingFile).use { output ->
                         input.copyTo(output)
                     }
                 }
-                true
+                
+                // Only rename if the staging file was fully written
+                if (stagingFile.exists() && stagingFile.length() > 0) {
+                    if (destination.exists()) destination.delete()
+                    stagingFile.renameTo(destination)
+                    true
+                } else {
+                    stagingFile.delete()
+                    false
+                }
             } else false
         } catch (e: Exception) {
+            android.util.Log.e("RiiSync", "Download failed for $url", e)
             false
         }
     }

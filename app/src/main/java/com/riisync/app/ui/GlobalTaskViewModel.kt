@@ -185,7 +185,7 @@ class GlobalTaskViewModel(application: Application) : AndroidViewModel(applicati
         gameTitlesMap[cleanId]?.let { return it }
         
         // 2. Fallback to Local JSON (WiiSave-Database.json)
-        val baseRiisyncDir = File(android.os.Environment.getExternalStorageDirectory(), "RiiSync")
+        val baseRiisyncDir = File("/storage/emulated/0", "RiiSync")
         val gamesJson = File(baseRiisyncDir, "database/WiiSave-Database.json")
         
         if (gamesJson.exists()) {
@@ -231,7 +231,7 @@ class GlobalTaskViewModel(application: Application) : AndroidViewModel(applicati
                     // Check if we just updated
                     val lastKnown = settingsManager.lastKnownVersion.value
                     if (lastKnown.isNotEmpty() && lastKnown != current) {
-                        fetchChangelog(settingsManager, current)
+                        fetchChangelog(settingsManager)
                         settingsManager.setLastKnownVersion(current)
                     } else if (lastKnown.isEmpty()) {
                         settingsManager.setLastKnownVersion(current)
@@ -256,21 +256,28 @@ class GlobalTaskViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     /**
-     * Fetches the changelog (release notes) for a specific version.
+     * Public wrapper for fetching and showing the changelog (useful for debugging).
      */
-    private fun fetchChangelog(settingsManager: SettingsManager, version: String) {
+    fun showLatestChangelog(settingsManager: SettingsManager) {
+        fetchChangelog(settingsManager)
+    }
+
+    /**
+     * Fetches the changelog (release notes) for the latest version.
+     */
+    private fun fetchChangelog(settingsManager: SettingsManager) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val service = GitHubService()
-                // Assuming release notes are in the latest release body or similar
-                val release = service.getLatestRelease("Im-Monee", "RiiSync", settingsManager.token.value.ifBlank { null })
-                val body = release?.optString("body", "No changelog available for this version.") ?: ""
+                // Fetch latest release in HTML format for the changelog viewer
+                val release = service.getLatestRelease("Im-Monee", "RiiSync", settingsManager.token.value.ifBlank { null }, format = "html")
+                val bodyHtml = release?.optString("body_html", "No changelog available for this version.") ?: ""
                 withContext(Dispatchers.Main) {
-                    changelogText = body
+                    changelogText = bodyHtml
                     showChangelog = true
                 }
             } catch (e: Exception) {
-                Log.e("RiiSync", "Failed to fetch changelog", e)
+                android.util.Log.e("RiiSync", "Failed to fetch changelog", e)
             }
         }
     }
@@ -278,6 +285,10 @@ class GlobalTaskViewModel(application: Application) : AndroidViewModel(applicati
     /**
      * Downloads and installs the latest application update.
      */
+    // File path of an APK downloaded by the ViewModel and awaiting installation by the UI.
+    var pendingInstallFilePath by mutableStateOf<String?>(null)
+    var pendingInstallExpectedPackage by mutableStateOf<String?>(null)
+
     fun performAppUpdate(settingsManager: SettingsManager) {
         val context = getApplication<Application>()
         
@@ -290,8 +301,11 @@ class GlobalTaskViewModel(application: Application) : AndroidViewModel(applicati
                 token = settingsManager.token.value.ifBlank { null },
                 onProgress = { task.progress.value = it },
                 onComplete = { file ->
-                    task.currentSubTask.value = "Starting installer..."
-                    com.riisync.app.utils.ApkDownloader.installApk(context, file)
+                    task.currentSubTask.value = "Download complete"
+                    // Record pending APK so UI can present installer and detect result.
+                    pendingInstallFilePath = file.absolutePath
+                    // Expected package is this app's package (update)
+                    pendingInstallExpectedPackage = context.packageName
                 },
                 onError = { error ->
                     notify("Update failed: $error", true)
@@ -615,16 +629,30 @@ class GlobalTaskViewModel(application: Application) : AndroidViewModel(applicati
     /**
      * Cancels a specific task by ID.
      */
-    fun cancelTask(id: String) {
+    fun cancelTask(id: String, settingsManager: SettingsManager? = null) {
         val task = activeTasks.find { it.id == id } ?: queuedTasks.find { it.id == id }
         if (task != null) {
+            val wasDatabaseTask = task.type == TaskType.SYSTEM && (task.title.contains("Icon") || task.title.contains("DB"))
+            
             task.job?.cancel()
             activeTasks.remove(task)
             queuedTasks.remove(task)
             task.cleanupPath?.let { activePaths.remove(it) }
             
+            if (wasDatabaseTask && settingsManager != null) {
+                // Specialized cleanup for database cancellation
+                viewModelScope.launch(Dispatchers.IO) {
+                    val builder = GameDatabaseBuilder(getApplication())
+                    builder.clearDatabase(settingsManager)
+                    withContext(Dispatchers.Main) {
+                        notify("Database download cancelled and files cleaned.", false)
+                    }
+                }
+            } else {
+                notify("Task '${task.title}' cancelled.", false)
+            }
+            
             if (activeTasks.isEmpty()) GitService.stop(getApplication())
-            notify("Task '${task.title}' cancelled.", false)
         }
     }
 

@@ -10,10 +10,10 @@ android {
 
     defaultConfig {
         applicationId = "com.riisync.app"
-        minSdk = 26          // Shizuku richiede almeno API 24; usiamo 26 per sicurezza
+        minSdk = 26          // Shizuku needs 24, but I use 26 for better compatibility with modern Android versions.
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
 
         ndk {
             abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
@@ -58,6 +58,15 @@ android {
         resources {
             pickFirsts.add("plugin.properties")
         }
+    }
+
+    applicationVariants.all {
+        val variant = this
+        outputs.map { it as com.android.build.gradle.internal.api.ApkVariantOutputImpl }
+            .forEach { output ->
+                val abi = output.getFilter(com.android.build.OutputFile.ABI) ?: "universal"
+                output.outputFileName = "riisync_${variant.versionName}_$abi.apk"
+            }
     }
 }
 

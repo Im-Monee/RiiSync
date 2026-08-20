@@ -51,7 +51,7 @@ fun DiffDialog(
                             else -> Color.Transparent
                         }
                         val textColor = when {
-                            line.startsWith("+") -> Color(0xFF2E7D32)
+                            line.startsWith("+") -> Color(0xFF1976D2)
                             line.startsWith("-") -> Color(0xFFC62828)
                             line.startsWith("@@") -> Color(0xFF1976D2)
                             else -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -78,3 +78,4 @@ fun DiffDialog(
         }
     )
 }
+

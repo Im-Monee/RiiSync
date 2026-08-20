@@ -7,21 +7,53 @@ package com.riisync.app.git
 
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
+import javax.crypto.KeyGenerator
+import java.security.KeyStore
 
 /**
  * Manager class for secure storage of credentials.
  * @param context The application context used to initialize SharedPreferences.
  */
 class TokenManager(context: Context) {
-    private val masterKey = MasterKey.Builder(context)
-        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-        .build()
+    companion object {
+        private const val KEY_ALIAS = "riisync_master_key"
+    }
 
+    init { ensureKeyExists() }
+
+    /**
+     * Ensures an AES key with the configured alias exists in the AndroidKeyStore.
+     * Creates one using javax.crypto.KeyGenerator when missing.
+     */
+    private fun ensureKeyExists() {
+        try {
+            val keyStore = KeyStore.getInstance("AndroidKeyStore")
+            keyStore.load(null)
+            if (!keyStore.containsAlias(KEY_ALIAS)) {
+                val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
+                val spec = KeyGenParameterSpec.Builder(
+                    KEY_ALIAS,
+                    KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+                )
+                    .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                    .setKeySize(256)
+                    .build()
+                keyGenerator.init(spec)
+                keyGenerator.generateKey()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    @Suppress("DEPRECATION")
     private val prefs = EncryptedSharedPreferences.create(
-        context,
-        "secure_tokens",
-        masterKey,
+            "secure_tokens",
+            KEY_ALIAS,
+            context,
         EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
     )

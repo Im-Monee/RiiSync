@@ -1,4 +1,4 @@
-/**
+﻿/**
  * GitHub API Service for RiiSync.
  * This file contains the logic for interacting with the GitHub REST API to perform repository searches,
  * profile lookups, and metadata retrieval.
@@ -70,13 +70,6 @@ class GitHubService {
         val url: String
     )
 
-    // Helper to set Authorization header safely
-    private fun setAuth(conn: HttpURLConnection, token: String?) {
-        // Modern GitHub tokens work best with "Bearer".
-        // We also ensure a consistent, professional User-Agent for all requests.
-        token?.let { conn.setRequestProperty("Authorization", "Bearer ${it.trim()}") }
-        conn.setRequestProperty("User-Agent", "RiiSync-App/1.0 (Android)")
-    }
 
     /**
      * Checks if a specific user is a collaborator on a repository.
@@ -88,7 +81,7 @@ class GitHubService {
             val url = URL("https://api.github.com/repos/$owner/$repo/collaborators/$username")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
-            setAuth(conn, token)
+            setAuthBearer(conn, token)
             conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
 
             // GitHub returns 204 No Content if the user is a collaborator
@@ -108,7 +101,7 @@ class GitHubService {
             val url = URL("https://api.github.com/repos/$fullName/git/trees/$branch?recursive=1")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
-            setAuth(conn, token)
+            setAuthBearer(conn, token)
             conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
 
             if (conn.responseCode == 200) {
@@ -141,7 +134,7 @@ class GitHubService {
             val url = URL("https://api.github.com/repos/$fullName/readme")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
-            setAuth(conn, token)
+            setAuthBearer(conn, token)
             conn.setRequestProperty("Accept", "application/vnd.github.v3.html")
 
             if (conn.responseCode == 200) {
@@ -165,7 +158,7 @@ class GitHubService {
             val url = URL(urlString)
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
-            setAuth(conn, token)
+            setAuthBearer(conn, token)
             conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
 
             if (conn.responseCode == 200) {
@@ -206,7 +199,7 @@ class GitHubService {
             val url = URL(urlString)
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
-            setAuth(conn, token)
+            setAuthBearer(conn, token)
             conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
 
             if (conn.responseCode == 200) {
@@ -240,7 +233,7 @@ class GitHubService {
             val url = URL("https://api.github.com/search/repositories?q=$encodedQuery&sort=updated&order=desc&per_page=15&page=$page")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
-            setAuth(conn, token)
+            setAuthBearer(conn, token)
             conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
 
             if (conn.responseCode == 200) {
@@ -274,7 +267,7 @@ class GitHubService {
             val url = URL("https://api.github.com/search/users?q=$encodedQuery&per_page=15&page=$page")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
-            setAuth(conn, token)
+            setAuthBearer(conn, token)
             conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
 
             if (conn.responseCode == 200) {
@@ -316,7 +309,7 @@ class GitHubService {
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "POST"
             // token parameter is mandatory here
-            setAuth(conn, token)
+            setAuthBearer(conn, token)
             conn.setRequestProperty("Content-Type", "application/json")
             conn.doOutput = true
 
@@ -349,7 +342,7 @@ class GitHubService {
             val url = URL("https://api.github.com/repos/$fullName")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
-            setAuth(conn, token)
+            setAuthBearer(conn, token)
             conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
 
             if (conn.responseCode == 200) {
@@ -373,7 +366,7 @@ class GitHubService {
             val url = URL("https://api.github.com/repos/$fullName/collaborators")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
-            setAuth(conn, token)
+            setAuthBearer(conn, token)
             conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
 
             if (conn.responseCode == 200) {
@@ -428,7 +421,7 @@ class GitHubService {
             val url = URL("https://api.github.com/repos/$fullName/commits?per_page=10&page=$page")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
-            setAuth(conn, token)
+            setAuthBearer(conn, token)
             conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
 
             if (conn.responseCode == 200) {
@@ -474,7 +467,7 @@ class GitHubService {
             val url = URL("https://api.github.com/repos/$fullName/commits/$sha")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
-            setAuth(conn, token)
+            setAuthBearer(conn, token)
             conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
 
             if (conn.responseCode == 200) {
@@ -514,7 +507,7 @@ class GitHubService {
             val url = URL("https://api.github.com/repos/Mone/RiiSync/releases/latest")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
-            setAuth(conn, token)
+            setAuthBearer(conn, token)
             conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
 
             if (conn.responseCode == 200) {
@@ -532,14 +525,21 @@ class GitHubService {
 
     /**
      * Fetches metadata for the latest release of a GitHub repository.
+     * Supports 'html' format to get the body pre-rendered as HTML.
      */
-    suspend fun getLatestRelease(owner: String, repo: String, token: String? = null): JSONObject? = withContext(Dispatchers.IO) {
+    suspend fun getLatestRelease(owner: String, repo: String, token: String? = null, format: String = "json"): JSONObject? = withContext(Dispatchers.IO) {
         try {
             val url = URL("https://api.github.com/repos/$owner/$repo/releases/latest")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
-            setAuth(conn, token)
-            conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
+            setAuthBearer(conn, token)
+            
+            val acceptHeader = if (format == "html") {
+                "application/vnd.github.v3.html+json"
+            } else {
+                "application/vnd.github.v3+json"
+            }
+            conn.setRequestProperty("Accept", acceptHeader)
 
             if (conn.responseCode == 200) {
                 val response = conn.inputStream.bufferedReader().use { it.readText() }
@@ -558,3 +558,7 @@ class GitHubService {
      */
     suspend fun getLatestShizukuRelease(token: String? = null): JSONObject? = getLatestRelease("RikkaApps", "Shizuku", token)
 }
+
+
+
+

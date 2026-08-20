@@ -25,6 +25,57 @@ import java.net.URL
 object ApkDownloader {
 
     /**
+     * Returns the browser-download URL for the latest release APK matching filenameHint (suspend).
+     */
+    suspend fun getLatestReleaseAssetUrl(owner: String, repo: String, filenameHint: String? = null, token: String? = null): String? {
+        return try {
+            val service = GitHubService()
+            val release = service.getLatestRelease(owner, repo, token) ?: return null
+            val assets = release.getJSONArray("assets")
+            for (i in 0 until assets.length()) {
+                val asset = assets.getJSONObject(i)
+                val name = asset.getString("name")
+                if (filenameHint == null) return asset.optString("browser_download_url")
+                if (name.equals(filenameHint, ignoreCase = true) || name.contains(filenameHint ?: "", ignoreCase = true)) {
+                    return asset.optString("browser_download_url")
+                }
+            }
+            // fallback to first APK asset
+            for (i in 0 until assets.length()) {
+                val asset = assets.getJSONObject(i)
+                val name = asset.getString("name")
+                if (name.endsWith(".apk", ignoreCase = true)) return asset.optString("browser_download_url")
+            }
+            null
+        } catch (e: Exception) { null }
+    }
+
+    /**
+     * Open a URL in the external browser.
+     */
+    fun openUrlInBrowser(context: android.content.Context, url: String) {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) { e.printStackTrace() }
+    }
+
+    /**
+     * Create an installer intent for the APK file that can be launched with ActivityResultLauncher.
+     */
+    fun createInstallIntent(context: android.content.Context, apkFile: File): Intent {
+        val authority = "${context.packageName}.fileprovider"
+        val uri = FileProvider.getUriForFile(context, authority, apkFile)
+        
+        return Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "application/vnd.android.package-archive")
+            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+    }
+
+    /**
      * Specifically resolves the latest Official Dolphin build URL using their update API.
      */
     suspend fun resolveDolphinOfficialUrl(): String = withContext(Dispatchers.IO) {
@@ -195,16 +246,10 @@ object ApkDownloader {
      */
     fun installApk(context: Context, apkFile: File) {
         try {
-            val authority = "${context.packageName}.fileprovider"
-            val uri = FileProvider.getUriForFile(context, authority, apkFile)
-            
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(uri, "application/vnd.android.package-archive")
-                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
-            }
+            val intent = createInstallIntent(context, apkFile)
             context.startActivity(intent)
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("ApkDownloader", "Failed to launch installer", e)
         }
     }
 }

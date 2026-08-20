@@ -208,6 +208,40 @@ fun ModdingScreen(taskViewModel: GlobalTaskViewModel, settingsManager: SettingsM
     var showInstallPermissionDialog by remember { mutableStateOf(false) }
     var pendingInstallationType by remember { mutableStateOf("new") }
 
+    // Install flow UI states for Shizuku/Dolphin downloads
+    var showShizukuInstallChoice by remember { mutableStateOf(false) }
+    var shizukuFilenameHint by remember { mutableStateOf("shizuku.apk") }
+    var showInstallResultDialog by remember { mutableStateOf(false) }
+    var installResultTitle by remember { mutableStateOf("") }
+    var installResultMessage by remember { mutableStateOf("") }
+
+    val installerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        // Prefer checking package presence for a definitive success when known
+        val expectedPkg = if (pendingInstallationType == "new") "moe.shizuku.privileged.api" else "moe.shizuku.privileged.api"
+        val pm = context.packageManager
+        val installed = try { pm.getPackageInfo(expectedPkg, 0); true } catch (e: Exception) { false }
+        if (installed) {
+            installResultTitle = "Installed"
+            installResultMessage = "Shizuku installed successfully."
+        } else {
+            when (result.resultCode) {
+                android.app.Activity.RESULT_OK -> {
+                    installResultTitle = "Installed"
+                    installResultMessage = "Shizuku installed successfully."
+                }
+                android.app.Activity.RESULT_CANCELED -> {
+                    installResultTitle = "Aborted"
+                    installResultMessage = "Installation was cancelled by the user."
+                }
+                else -> {
+                    installResultTitle = "Failed"
+                    installResultMessage = "Installation failed."
+                }
+            }
+        }
+        showInstallResultDialog = true
+    }
+
     val folderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         uri?.let {
             val path = PathUtils.getAbsolutePath(context, it)
@@ -269,17 +303,10 @@ fun ModdingScreen(taskViewModel: GlobalTaskViewModel, settingsManager: SettingsM
                 onDeleteExternal = { unknownFolderToDelete = it },
                 onShizukuAction = { 
                     if (!isShizukuInstalled) {
-                        if (ApkDownloader.canInstallPackages(context)) {
-                            isDownloading = true
-                            scope.launch {
-                                ApkDownloader.downloadFromGitHub(
-                                    context, "RikkaApps", "Shizuku", "shizuku.apk", settingsManager.token.value.ifBlank { null }, 
-                                    { downloadProgress = it }, 
-                                    { isDownloading = false; pendingInstallationType = "new"; ApkDownloader.installApk(context, it) }, 
-                                    { isDownloading = false; taskViewModel.notify(it, true) }
-                                )
-                            }
-                        } else showInstallPermissionDialog = true
+                        // Ask user whether to open browser or download/install in-app
+                        shizukuFilenameHint = "shizuku.apk"
+                        pendingInstallationType = "new"
+                        showShizukuInstallChoice = true
                     } else if (shizukuAvailable && !shizukuGranted) {
                         ShizukuHelper.requestPermission()
                     }
@@ -377,17 +404,41 @@ fun ModdingScreen(taskViewModel: GlobalTaskViewModel, settingsManager: SettingsM
 
     if (showUpdateConfirm) { AlertDialog(onDismissRequest = { showUpdateConfirm = false }, title = { Text("Shizuku Update Available") }, text = { Text("A newer version of Shizuku is available. Update now?") }, confirmButton = { Button(onClick = { 
                 showUpdateConfirm = false
-                if (ApkDownloader.canInstallPackages(context)) {
-                    isDownloading = true
-                    scope.launch {
-                        ApkDownloader.downloadFromGitHub(
-                            context, "RikkaApps", "Shizuku", "shizuku_update.apk", settingsManager.token.value.ifBlank { null },
-                            { downloadProgress = it }, { isDownloading = false; pendingInstallationType = "update"; ApkDownloader.installApk(context, it) }, { isDownloading = false; taskViewModel.notify(it, true) }
-                        )
-                    }
-                } else showInstallPermissionDialog = true
+                // Use the same choice dialog but hint to download the update variant
+                shizukuFilenameHint = "shizuku_update.apk"
+                pendingInstallationType = "update"
+                showShizukuInstallChoice = true
             }) { Text("Update") } }, dismissButton = { TextButton(onClick = { showUpdateConfirm = false }) { Text("Later") } }) }
     if (showInstallPermissionDialog) { AlertDialog(onDismissRequest = { showInstallPermissionDialog = false }, title = { Text("Grant Install Permission") }, text = { Text(stringResource(R.string.install_permission_required)) }, confirmButton = { Button(onClick = { showInstallPermissionDialog = false; ApkDownloader.requestInstallPermission(context) }) { Text("Go to Settings") } }, dismissButton = { TextButton(onClick = { showInstallPermissionDialog = false }) { Text("Cancel") } }) }
+
+    // Choice dialog for Shizuku download
+    if (showShizukuInstallChoice) {
+        AlertDialog(
+            onDismissRequest = { showShizukuInstallChoice = false },
+            modifier = Modifier.widthIn(max = 420.dp),
+            title = { Text("Download Manager") },
+            text = {
+                Text(
+                    "Do you want to download Shizuku?\n\nYour default browser will be open.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    showShizukuInstallChoice = false
+                    scope.launch {
+                        val url = ApkDownloader.getLatestReleaseAssetUrl("RikkaApps", "Shizuku", shizukuFilenameHint, settingsManager.token.value.ifBlank { null })
+                        if (url != null) ApkDownloader.openUrlInBrowser(context, url) else ApkDownloader.openUrlInBrowser(context, "https://github.com/RikkaApps/Shizuku/releases/latest")
+                    }
+                }) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { showShizukuInstallChoice = false }) { Text("Cancel") } }
+        )
+    }
+
+    if (showInstallResultDialog) {
+        AlertDialog(onDismissRequest = { showInstallResultDialog = false }, title = { Text(installResultTitle) }, text = { Text(installResultMessage) }, confirmButton = { Button(onClick = { showInstallResultDialog = false }) { Text("OK") } })
+    }
 
     if (showModScanWarning) {
         AlertDialog(
@@ -538,7 +589,9 @@ fun ModdingListPane(
         Text(stringResource(R.string.modding_title), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Text(stringResource(R.string.modding_description), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-        val statusColor = if (shizukuGranted) Color(0xFF2E7D32) else if (shizukuAvailable) Color(0xFFE6A700) else MaterialTheme.colorScheme.error
+        val isDarkTheme = androidx.compose.foundation.isSystemInDarkTheme()
+        val shizukuActiveColor = if (isDarkTheme) Color(0xFF81C784) else Color(0xFF2E7D32)
+        val statusColor = if (shizukuGranted) shizukuActiveColor else if (shizukuAvailable) Color(0xFFE6A700) else MaterialTheme.colorScheme.error
         val statusText = if (!isShizukuInstalled) stringResource(R.string.shizuku_status_not_installed) else if (shizukuGranted) stringResource(R.string.shizuku_status_active) else if (shizukuAvailable) stringResource(R.string.shizuku_status_unauthorized) else stringResource(R.string.shizuku_status_inactive)
 
         Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = statusColor.copy(alpha = 0.1f)), border = BorderStroke(1.dp, statusColor.copy(alpha = 0.5f))) {
@@ -584,27 +637,24 @@ fun ModdingListPane(
                     }
                 }
                 if (isDownloading) {
-                    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                        LinearProgressIndicator(
-                            progress = { downloadProgress }, 
-                            modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape)
-                        )
-                        Row(Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Download, null, modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.primary)
-                            Spacer(Modifier.width(6.dp))
-                            Column {
-                                Text(
-                                    stringResource(R.string.downloading_shizuku), 
-                                    style = MaterialTheme.typography.labelSmall, 
-                                    color = MaterialTheme.colorScheme.primary, 
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Text(
-                                    "${(downloadProgress * 100).toInt()}%", 
-                                    style = MaterialTheme.typography.labelSmall, 
-                                    color = Color.Gray
-                                )
-                            }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Download, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                stringResource(R.string.downloading_shizuku),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                "${(downloadProgress * 100).toInt()}%",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.Gray
+                            )
                         }
                     }
                 }
@@ -630,7 +680,7 @@ fun ModdingListPane(
                             enabled = taskViewModel.wifiConnected,
                             modifier = Modifier.weight(1f), 
                             shape = RoundedCornerShape(12.dp), 
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32), disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant)
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1976D2), disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant)
                         ) { 
                             Icon(
                                 Icons.Default.Sync, 
@@ -654,7 +704,7 @@ fun ModdingListPane(
                         Card(modifier = Modifier.fillMaxWidth()) {
                             Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 // 1. Leading Icon (Local-First with Live Refresh)
-                                val baseRiisyncDir = File(android.os.Environment.getExternalStorageDirectory(), "RiiSync")
+                                val baseRiisyncDir = File("/storage/emulated/0", "RiiSync")
                                 val animatedIconFile = File(baseRiisyncDir, "database/${mod.gameId?.take(4)}/icon_animated.png")
                                 val hasLocalIcon = animatedIconFile.exists()
                                 
@@ -722,7 +772,7 @@ fun ModdingListPane(
                                     Icon(
                                         if (isHealthy) Icons.Default.CheckCircle else Icons.Default.Warning, 
                                         contentDescription = "Status", 
-                                        tint = if (isHealthy) Color(0xFF2E7D32) else Color.Red,
+                                        tint = if (isHealthy) Color(0xFF1976D2) else Color.Red,
                                         modifier = Modifier.size(18.dp)
                                     )
                                     
@@ -827,7 +877,7 @@ fun ModdingDetailPane(
         val gameId = (taskViewModel.pendingMod as? PendingMod)?.gameId
         if (gameId != null) {
             val cleanId = gameId.substring(0, minOf(gameId.length, 6))
-            val baseRiisyncDir = File(android.os.Environment.getExternalStorageDirectory(), "RiiSync")
+            val baseRiisyncDir = File("/storage/emulated/0", "RiiSync")
             val localCoverFile = File(baseRiisyncDir, "database/GameTDBcovers/${cleanId.take(4)}/cover.png")
             val isDbActive = taskViewModel.activeTasks.any { it.type == TaskType.SYSTEM && it.title.contains("Icon") }
             
@@ -946,7 +996,16 @@ fun ModdingDetailPane(
             }
         }
 
-        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)), modifier = Modifier.fillMaxWidth()) { Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF2E7D32)); Spacer(Modifier.width(8.dp)); Text(validationMessage, style = MaterialTheme.typography.bodySmall, color = Color(0xFF2E7D32)) } }
+        val isDarkTheme = androidx.compose.foundation.isSystemInDarkTheme()
+        val verifiedBg = if (isDarkTheme) Color(0xFF1B2E1B) else Color(0xFFE8F5E9)
+        val verifiedContent = if (isDarkTheme) Color(0xFF81C784) else Color(0xFF2E7D32)
+        Card(colors = CardDefaults.cardColors(containerColor = verifiedBg), modifier = Modifier.fillMaxWidth()) {
+            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.CheckCircle, null, tint = verifiedContent)
+                Spacer(Modifier.width(8.dp))
+                Text(validationMessage, style = MaterialTheme.typography.bodySmall, color = verifiedContent)
+            }
+        }
 
         if (xmlFile != null) OutlinedButton(onClick = { showXmlEditor = true }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.EditNote, null); Text("Edit XML Patch") }
 
@@ -956,7 +1015,7 @@ fun ModdingDetailPane(
             onClick = onLink, 
             modifier = Modifier.fillMaxWidth(), 
             enabled = modName.isNotBlank() && !isLinking,
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32), disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1976D2), disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant),
             shape = RoundedCornerShape(12.dp)
         ) {
             if (isLinking) CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
@@ -1090,7 +1149,8 @@ class XmlSyntaxTransformation : VisualTransformation {
         val builder = AnnotatedString.Builder(text.text)
         "<[^>]+>".toRegex().findAll(text.text).forEach { builder.addStyle(SpanStyle(color = Color(0xFF0055AA), fontWeight = FontWeight.Bold), it.range.first, it.range.last + 1) }
         "\\b[a-zA-Z0-9_-]+=".toRegex().findAll(text.text).forEach { builder.addStyle(SpanStyle(color = Color(0xFF660099)), it.range.first, it.range.last + 1) }
-        "\"([^\"]*)\"".toRegex().findAll(text.text).forEach { builder.addStyle(SpanStyle(color = Color(0xFF2E7D32)), it.range.first, it.range.last + 1) }
+        "\"([^\"]*)\"".toRegex().findAll(text.text).forEach { builder.addStyle(SpanStyle(color = Color(0xFF1976D2)), it.range.first, it.range.last + 1) }
         return TransformedText(builder.toAnnotatedString(), OffsetMapping.Identity)
     }
 }
+

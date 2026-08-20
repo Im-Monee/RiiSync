@@ -267,7 +267,7 @@ fun ChangesScreen(localPath: String, taskViewModel: GlobalTaskViewModel) {
 @Composable
 fun StatusIcon(status: String) {
     when (status) {
-        "Added", "Untracked" -> Box(Modifier.size(20.dp).background(Color(0xFF2E7D32), RoundedCornerShape(4.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp)) }
+        "Added", "Untracked" -> Box(Modifier.size(20.dp).background(Color(0xFF1976D2), RoundedCornerShape(4.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp)) }
         "Deleted" -> Box(Modifier.size(20.dp).background(Color(0xFFC62828), RoundedCornerShape(4.dp)), contentAlignment = Alignment.Center) { Box(Modifier.size(12.dp, 2.dp).background(Color.White)) }
         "Modified", "Changed" -> Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) { Box(Modifier.fillMaxSize().background(Color(0xFFFFB300), CircleShape)); Box(Modifier.size(6.dp).background(Color.White, CircleShape)) }
         else -> Box(Modifier.size(20.dp).background(Color.Gray, RoundedCornerShape(4.dp)))
@@ -281,3 +281,4 @@ private fun GitManager.Result.toLogString(context: android.content.Context): Str
     is GitManager.Result.Success -> context.getString(R.string.ok_format, message)
     is GitManager.Result.Error -> context.getString(R.string.error_format, message)
 }
+

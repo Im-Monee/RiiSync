@@ -1210,6 +1210,7 @@ fun RepoDetailsView(
             }
         }
 
+        @Suppress("DEPRECATION")
         ScrollableTabRow(
             selectedTabIndex = selectedTab,
             containerColor = Color.Transparent,
@@ -1276,7 +1277,7 @@ fun ReadmeTab(repo: GitHubService.RepoInfo, token: String, githubService: GitHub
 }
 
 @Composable
-fun HtmlReadmeViewer(html: String, isDark: Boolean, repo: GitHubService.RepoInfo) {
+fun HtmlReadmeViewer(html: String, isDark: Boolean, repo: GitHubService.RepoInfo? = null) {
     val accentColor = MaterialTheme.colorScheme.primary.toArgb()
 
     // Inject CSS to match the app theme and support full GitHub syntax
@@ -1456,7 +1457,11 @@ fun HtmlReadmeViewer(html: String, isDark: Boolean, repo: GitHubService.RepoInfo
         },
         update = { webView ->
             // Use the specific repository as the base URL to resolve relative images correctly
-            val baseUrl = "https://github.com/${repo.fullName}/raw/${repo.defaultBranch}/"
+            val baseUrl = if (repo != null) {
+                "https://github.com/${repo.fullName}/raw/${repo.defaultBranch}/"
+            } else {
+                null
+            }
             webView.loadDataWithBaseURL(baseUrl, styledHtml, "text/html", "UTF-8", null)
         },
         modifier = Modifier.fillMaxSize()
@@ -1933,7 +1938,7 @@ fun CommitFilesDialog(fullName: String, sha: String, token: String, githubServic
     var files by remember { mutableStateOf<List<GitHubService.CommitFile>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     LaunchedEffect(sha) { files = githubService.getCommitFiles(fullName, sha, token.ifBlank { null }); isLoading = false }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.modified_files_format, sha.take(7))) }, text = { Box(Modifier.heightIn(max = 300.dp).fillMaxWidth()) { if (isLoading) { Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() } } else LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) { items(files) { file -> Row(Modifier.fillMaxWidth().padding(4.dp), horizontalArrangement = Arrangement.SpaceBetween) { Text(file.filename, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f)); Text(file.status, style = MaterialTheme.typography.labelSmall, color = when(file.status) { "added" -> Color(0xFF2E7D32); "removed" -> Color(0xFFD32F2F); else -> Color(0xFF1976D2) }) } } } } }, confirmButton = { Button(onClick = onDismiss) { Text(stringResource(R.string.ok)) } })
+    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.modified_files_format, sha.take(7))) }, text = { Box(Modifier.heightIn(max = 300.dp).fillMaxWidth()) { if (isLoading) { Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() } } else LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) { items(files) { file -> Row(Modifier.fillMaxWidth().padding(4.dp), horizontalArrangement = Arrangement.SpaceBetween) { Text(file.filename, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f)); Text(file.status, style = MaterialTheme.typography.labelSmall, color = when(file.status) { "added" -> Color(0xFF1976D2); "removed" -> Color(0xFFD32F2F); else -> Color(0xFF1976D2) }) } } } } }, confirmButton = { Button(onClick = onDismiss) { Text(stringResource(R.string.ok)) } })
 }
 
 /**
@@ -1955,7 +1960,7 @@ fun IncomingFilesDialog(localPath: String, sha: String, gitManager: GitManager, 
     var files by remember { mutableStateOf<List<GitManager.LocalChange>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     LaunchedEffect(sha) { files = gitManager.getFilesForCommitLocal(File(localPath), sha); isLoading = false }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.incoming_files_format, sha.take(7))) }, text = { Box(Modifier.heightIn(max = 300.dp).fillMaxWidth()) { if (isLoading) { Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() } } else LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) { items(files) { file -> Row(Modifier.fillMaxWidth().padding(4.dp), horizontalArrangement = Arrangement.SpaceBetween) { Text(file.path, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f)); Text(file.status, style = MaterialTheme.typography.labelSmall, color = when(file.status) { "Added", "ADD" -> Color(0xFF2E7D32); "Deleted", "DELETE" -> Color(0xFFD32F2F); else -> Color(0xFF1976D2) }) } } } } }, confirmButton = { Button(onClick = { onDismiss() }) { Text(stringResource(R.string.ok)) } })
+    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.incoming_files_format, sha.take(7))) }, text = { Box(Modifier.heightIn(max = 300.dp).fillMaxWidth()) { if (isLoading) { Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() } } else LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) { items(files) { file -> Row(Modifier.fillMaxWidth().padding(4.dp), horizontalArrangement = Arrangement.SpaceBetween) { Text(file.path, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f)); Text(file.status, style = MaterialTheme.typography.labelSmall, color = when(file.status) { "Added", "ADD" -> Color(0xFF1976D2); "Deleted", "DELETE" -> Color(0xFFD32F2F); else -> Color(0xFF1976D2) }) } } } } }, confirmButton = { Button(onClick = { onDismiss() }) { Text(stringResource(R.string.ok)) } })
 }
 
 /**
@@ -1986,3 +1991,4 @@ fun getFilterIcon(filter: String): ImageVector = when (filter) {
     "Discussions" -> Icons.Default.MailOutline // Placeholder
     else -> Icons.AutoMirrored.Filled.List
 }
+

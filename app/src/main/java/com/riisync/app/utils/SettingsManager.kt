@@ -48,6 +48,13 @@ class SettingsManager(context: Context) {
     private val _rootCloneFolder = mutableStateOf(prefs.getString("root_clone_folder", "/storage/emulated/0/Github") ?: "/storage/emulated/0/Github")
     val rootCloneFolder: State<String> = _rootCloneFolder
 
+    init {
+        // Ensure .nomedia exists for the configured clone folder on startup
+        try {
+            ensureNoMedia(_rootCloneFolder.value)
+        } catch (_: Exception) { /* best-effort */ }
+    }
+
     private val _sshPrivateKey = mutableStateOf(prefs.getString("ssh_private_key", "") ?: "")
     val sshPrivateKey: State<String> = _sshPrivateKey
 
@@ -149,6 +156,28 @@ class SettingsManager(context: Context) {
     fun setRootCloneFolder(path: String) {
         _rootCloneFolder.value = path
         prefs.edit().putString("root_clone_folder", path).apply()
+        try {
+            ensureNoMedia(path)
+        } catch (_: Exception) {
+            // best effort; do not crash if filesystem isn't writable
+        }
+    }
+
+    private fun ensureNoMedia(folderPath: String) {
+        if (folderPath.isBlank()) return
+        try {
+            val dir = File(folderPath)
+            if (!dir.exists()) {
+                // attempt to create directory tree
+                dir.mkdirs()
+            }
+            val nomedia = File(dir, ".nomedia")
+            if (!nomedia.exists()) {
+                nomedia.createNewFile()
+            }
+        } catch (e: Exception) {
+            // swallow - best-effort
+        }
     }
 
     /**

@@ -370,7 +370,7 @@
     <!-- Settings Extra -->
     <string name="restart_setup">Restart Setup</string>
     <string name="restart_setup_desc">Re-run the initial onboarding flow without deleting your mod library or bookmarks.</string>
-    <string name="start_over_config">Start Over Configuration</string>
+    <string name="start_over_config">Configuration</string>
     <string name="save_profile_identity">Save Profile &amp; Identity</string>
     <string name="cleaning_cache">Cleaning Cache...</string>
     <string name="wiping_data">Wiping Data...</string>
@@ -421,7 +421,7 @@
     <string name="private_access_required">Private Access Required</string>
     <string name="clear_db">Clear DB</string>
     <string name="clear_db_desc">Download a database of Wii Save Icons and Covers for your Modding Tab.</string>
-    <string name="confirm_clear_db_title">Clear Icon/Cover Database</string>
+    <string name="confirm_clear_db_title">Database cleaner</string>
     <string name="confirm_clear_db_msg">Are you sure? This will delete all downloaded Wii save icons and covers. You will need to rebuild the database to see them again.</string>
     <string name="database_cleared">Database cleared.</string>
 </resources>

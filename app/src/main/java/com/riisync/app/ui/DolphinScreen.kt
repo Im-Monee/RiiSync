@@ -105,7 +105,7 @@ fun DolphinScreen() {
                 text = if (isValid) "✅ $validationMessage" else "❌ $validationMessage",
                 modifier = Modifier.padding(16.dp),
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (isValid) Color(0xFF2E7D32) else Color(0xFFC62828)
+                color = if (isValid) Color(0xFF1976D2) else Color(0xFFC62828)
             )
         }
 
@@ -146,3 +146,4 @@ fun DolphinScreen() {
         Text(result)
     }
 }
+

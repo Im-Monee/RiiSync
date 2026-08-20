@@ -9,6 +9,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import android.provider.DocumentsContract
+import java.io.File
 
 /**
  * Utility object for path conversions.
@@ -26,10 +27,11 @@ object PathUtils {
             val path = split[1]
 
             return if ("primary".equals(type, ignoreCase = true)) {
-                "${Environment.getExternalStorageDirectory()}/$path"
-            } else {
-                "/storage/$type/$path"
-            }
+                            // Use explicit public storage root to avoid deprecated API calls
+                            File("/storage/emulated/0", path).path
+                        } else {
+                            "/storage/$type/$path"
+                        }
         }
         // Fallback minimo se non è un tree URI (es. selezione file singolo)
         return null
